@@ -125,11 +125,8 @@ dev.off()
 # PCA overview of sample-level variation.
 pca_data <- plotPCA(vs, intgroup="group", returnData=TRUE)
 percent_var <- round(100 * attr(pca_data, "percentVar"))
-pca_data$sample_id <- pca_data$name
 p3 <- ggplot(pca_data, aes(PC1, PC2, color=group)) +
   geom_point(size=3, alpha=.85) +
-  geom_text(aes(label=sample_id), check_overlap=TRUE, size=2.7,
-            vjust=-.8, show.legend=FALSE) +
   theme_classic(base_size=12) +
   labs(title="GSE103001 | PCA of variance-stabilized counts",
        x=paste0("PC1 (", percent_var[1], "%)"),
