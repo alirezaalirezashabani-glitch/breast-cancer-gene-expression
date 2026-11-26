@@ -26,6 +26,7 @@ if (!all(c("Normal", "Tumor") %in% colnames(pair_check)) ||
   stop("Each patient must have exactly one Normal and one Tumor sample.")
 }
 meta$group <- factor(meta$group, levels=c("Normal", "Tumor"))
+meta$patient_id_original <- meta$patient_id
 # Safe factor levels prevent formula/column-name warnings from hyphenated patient IDs.
 meta$patient_id <- factor(make.names(meta$patient_id))
 rownames(meta) <- meta$sample_id
@@ -99,7 +100,7 @@ target_results <- rr[!is.na(rr$gene_symbol) & rr$gene_symbol %in% targets, ]
 write.csv(target_results, "results/GSE103001/apoptosis_gene_results.csv", row.names=FALSE)
 
 # Volcano plot: exclude genes without valid test statistics from the plotting layer.
-vd <- rr[is.finite(rr$log2FoldChange) & !is.na(rr$padj), ]
+vd <- rr[is.finite(rr$log2FoldChange) & is.finite(rr$padj), ]
 vd$call <- ifelse(vd$padj < 0.05 & abs(vd$log2FoldChange) >= 1,
                   "Significant", "Not significant")
 p1 <- ggplot(vd, aes(log2FoldChange, -log10(pmax(padj, 1e-300)), color=call)) +
@@ -168,7 +169,7 @@ if (length(valid_targets)) {
 }
 
 write.csv(data.frame(sample_id=meta$sample_id,
-                     patient_id=as.character(meta$patient_id),
+                     patient_id=meta$patient_id_original,
                      group=as.character(meta$group)),
           "results/GSE103001/analysis_sample_metadata.csv", row.names=FALSE)
 writeLines(capture.output(sessionInfo()), "results/GSE103001/sessionInfo.txt")
