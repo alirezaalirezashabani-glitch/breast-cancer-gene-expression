@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   analysis:
@@ -35,14 +35,25 @@ jobs:
       - name: Run paired RNA-seq analysis and generate figures
         run: Rscript scripts/make_GSE103001_figures.R
 
-      - name: Commit generated data, tables, and figures
+      - name: Upload reproducible analysis outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: GSE103001-RNA-seq-results
+          path: |
+            data/GSE103001_counts_matrix.csv
+            results/GSE103001/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Add run summary
+        shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/GSE103001_counts_matrix.csv results/GSE103001
-          if git diff --cached --quiet; then
-            echo "No generated files changed."
-          else
-            git commit -m "Add GSE103001 differential expression results and figures"
-            git push
-          fi
+          {
+            echo "## GSE103001 paired RNA-seq analysis"
+            echo ""
+            echo "- Contrast: Tumour vs paired adjacent normal"
+            echo "- Model: DESeq2, ~ patient_id + group"
+            echo "- Main output: differential expression table and figures"
+            echo "- Download: Actions run → Artifacts → GSE103001-RNA-seq-results"
+            echo "- Interpretation: patient-tissue association; not a beta-cyclocitral treatment experiment"
+          } >> "$GITHUB_STEP_SUMMARY"
