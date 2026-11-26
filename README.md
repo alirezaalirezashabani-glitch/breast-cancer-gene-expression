@@ -1,62 +1,80 @@
 # Breast Cancer Gene Expression Analysis
 
-## Project overview
-A reproducible bioinformatics project focused on apoptosis-associated genes in breast cancer, especially **BAX, BCL2, CASP3, and TP53**. The work is motivated by experimental research involving MCF-7 cells, beta-cyclocitral, and nanoparticle-based treatments.
+**Author:** Alireza Shabani, PhD in Agricultural Biotechnology
 
-## Selected public dataset: GSE103001
-We selected **GSE103001**, a human RNA-seq study of 22 estrogen-receptor-positive (ER+) primary breast cancers and their 22 paired adjacent non-tumour breast tissues (44 samples total). GEO provides per-sample HTSeq gene-count files, making this dataset suitable for a count-based workflow.
+A reproducible RNA-seq workflow examining tumour-versus-adjacent-normal gene expression in an ER-positive breast cancer cohort, with a focused look at apoptosis-associated genes (**BAX, BCL2, CASP3, TP53**).
 
-- GEO record: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE103001
-- Publication: https://www.nature.com/articles/s41598-017-17811-2
-- Genome annotation reported by GEO: GRCh37.75 / hg19
-- Study design: paired tumour and adjacent normal tissue from the same patients.
+## Dataset
 
-**Scope limitation:** this cohort represents ER-positive primary breast cancer, not all breast-cancer subtypes. It is patient-tissue data, not an MCF-7 cell experiment and not a beta-cyclocitral treatment experiment.
+- **GEO accession:** [GSE103001](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE103001)
+- **Study publication:** [Scientific Reports](https://www.nature.com/articles/s41598-017-17811-2)
+- **Samples:** 22 ER-positive primary breast tumours and 22 paired adjacent non-tumour tissues (44 samples; 22 patient pairs).
+- **Data:** per-sample HTSeq raw gene counts.
+- **Reference annotation reported for the study:** GRCh37.75 / hg19.
 
-## Repository contents
-- `data/GSE103001_sample_metadata.csv`: 44 sample identifiers with paired patient IDs and tissue groups.
-- `data/sample_metadata_template.csv`: generic template for future datasets.
-- `scripts/analyze_GSE103001.R`: downloads the GEO supplementary count archive, combines per-sample HTSeq counts, performs paired differential-expression analysis with DESeq2, and generates a volcano plot and heatmap.
-- `scripts/differential_expression.R`: generic starter workflow for a separately supplied count matrix.
+The sample-to-patient mapping is recorded in `data/GSE103001_sample_metadata.csv`.
 
-## Run the GSE103001 analysis
-Install R, then install the required packages:
+## Analysis design
+
+The main pipeline is `scripts/make_GSE103001_figures.R`. It downloads the GEO supplementary archive, validates the expected sample files, constructs a raw integer count matrix, performs paired differential expression using DESeq2, maps Ensembl identifiers to gene symbols, and generates tables and figures.
+
+The model is:
 
 ```r
-if (!requireNamespace("BiocManager", quietly = TRUE))
-  install.packages("BiocManager")
-BiocManager::install(c("DESeq2", "GEOquery"))
-install.packages(c("ggplot2", "pheatmap", "matrixStats"))
+design = ~ patient_id + group
 ```
 
-From the repository root, run:
+The reported contrast is **Tumor versus Normal**. The volcano plot uses adjusted p-value and absolute log2 fold-change thresholds for visual highlighting; the full result table retains all tested genes and statistics.
+
+## Run locally
+
+Use an R installation with Bioconductor available. The GitHub Actions workflow uses the Bioconductor Docker image and installs:
+
+- Bioconductor: `GEOquery`, `DESeq2`, `AnnotationDbi`, `org.Hs.eg.db`
+- CRAN: `ggplot2`, `pheatmap`, `matrixStats`
+
+Then run from the repository root:
 
 ```bash
-Rscript scripts/analyze_GSE103001.R
+Rscript scripts/make_GSE103001_figures.R
 ```
 
-The script downloads the GEO supplementary archive and writes:
-- `data/GSE103001_counts_matrix.csv`
-- `results/GSE103001/differential_expression.csv`
-- `results/GSE103001/apoptosis_gene_results.csv`
-- `results/GSE103001/volcano_plot.png`
-- `results/GSE103001/top_variable_genes_heatmap.png`
+Or open the **Actions** tab and run **Run GSE103001 RNA-seq analysis** manually with `workflow_dispatch`.
 
-The DESeq2 model includes patient identity (`~ patient_id + group`) to account for the paired study design. The reported contrast is Tumour versus Normal.
+## Expected outputs
 
-## Scientific safeguards
-- Use the raw integer HTSeq counts for DESeq2; do not substitute TPM, FPKM, or other normalized expression values.
-- Review sample pairing, file completeness, count format, and quality-control metrics before interpreting results.
-- Gene identifiers in the count files may be Ensembl IDs. Gene-symbol mapping should be performed with an annotation release compatible with the study's GRCh37.75 reference before extracting BAX, BCL2, CASP3, and TP53. The current script's direct symbol filter is a placeholder and may return no rows until this mapping is added.
-- A tumour-versus-adjacent-normal association does not show that beta-cyclocitral or nanoparticles caused an expression change. Those effects require appropriate treated-versus-control experimental data.
-- This is a research workflow, not a clinical diagnostic tool.
+After a successful run, the pipeline writes:
+
+- `data/GSE103001_counts_matrix.csv` — raw integer count matrix.
+- `results/GSE103001/differential_expression.csv` — genome-wide DESeq2 results.
+- `results/GSE103001/apoptosis_gene_results.csv` — results for BAX, BCL2, CASP3 and TP53 when symbol mapping succeeds.
+- `results/GSE103001/volcano_plot.png` — differential-expression overview.
+- `results/GSE103001/top_variable_genes_heatmap.png` — top variable genes across samples.
+- `results/GSE103001/apoptosis_gene_expression.png` — normalized counts for apoptosis genes when mapped.
+- `results/GSE103001/sessionInfo.txt` — R and package versions for reproducibility.
+
+**Important:** output files are not considered available until a successful Actions run has generated and committed them. Check the Actions run status before citing or interpreting numerical results.
+
+## Scientific interpretation and limitations
+
+1. This is a comparison of patient tumour tissue with paired adjacent non-tumour tissue. It is **not** an MCF-7 cell-line treatment experiment.
+2. The cohort is ER-positive; findings should not be generalized automatically to every breast-cancer subtype.
+3. This dataset cannot establish that beta-cyclocitral, iron-oxide nanoparticles, or any other treatment caused expression changes. Treatment effects require a suitable treated-versus-control experiment.
+4. Raw integer counts are used for DESeq2. Normalized counts are used only for visualization.
+5. Gene-symbol annotation should be checked for compatibility with the study's genome build before biological interpretation.
+6. This workflow is a research analysis, not a clinical diagnostic test.
 
 ## Genes of interest
-- **BAX** — pro-apoptotic BCL-2 family member
-- **BCL2** — anti-apoptotic BCL-2 family member
-- **CASP3** — executioner caspase
-- **TP53** — tumour-suppressor transcription factor
 
-## Author
-Alireza Shabani  
-PhD in Biotechnology
+- **BAX:** pro-apoptotic BCL-2 family member.
+- **BCL2:** anti-apoptotic BCL-2 family member.
+- **CASP3:** executioner caspase.
+- **TP53:** tumour-suppressor transcription factor.
+
+## Repository structure
+
+- `data/`: sample metadata and generated count matrix.
+- `scripts/`: analysis scripts.
+- `docs/GENERATE_FIGURES.md`: execution and output guide.
+- `.github/workflows/`: automated GitHub Actions workflow.
+- `results/GSE103001/`: generated result tables and figures (created after a successful run).
