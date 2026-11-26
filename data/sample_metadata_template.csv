@@ -1,0 +1,5 @@
+sample_id,group
+SAMPLE_01,Control
+SAMPLE_02,Control
+SAMPLE_03,Tumor
+SAMPLE_04,Tumor
